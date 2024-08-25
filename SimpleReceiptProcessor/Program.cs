@@ -1,8 +1,5 @@
-using System.Data;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
+using System.Reflection;
 using SimpleReceiptProcessor.Controllers.Converters;
-using SimpleReceiptProcessor.Db;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,36 +8,26 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
-// add db
-builder.Services.AddDbContext<ReceiptsDbContext>(options =>
-    options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
-
 // add controllers
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.Converters.Add(new TimeSpanConverter());
-    });
-
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
+builder.Services.AddControllers()    .AddJsonOptions(options =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "Simple Receipt Processor",
-        Version = "v1"
-    });
+    options.JsonSerializerOptions.Converters.Add(new CustomTimeSpanConverter());
+});
+
+// add swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    options.IncludeXmlComments(xmlPath);
 });
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Simple Receipt Processor V1");
-    });}
+// enable swagger
+app.UseSwagger();
+app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "Simple Receipt Processor V1"); });
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
